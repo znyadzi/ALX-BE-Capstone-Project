@@ -15,8 +15,16 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include  # Import include
+from rest_framework import routers
+from library import views  # Assuming your views are in the 'library' app
+
+router = routers.DefaultRouter()
+router.register(r'books', views.BookViewSet)
+router.register(r'users', views.UserViewSet)
+router.register(r'checkouts', views.CheckoutViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/', include(router.urls)),  # Include the router URLs under '/api/'
 ]
