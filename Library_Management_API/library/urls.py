@@ -6,4 +6,10 @@ router.register(r'books', views.BookViewSet)
 router.register(r'users', views.UserViewSet)
 router.register(r'checkouts', views.CheckoutViewSet)
 
-urlpatterns = router.urls
+urlpatterns = [
+    path('books/', BookViewSet.as_view()),
+]
+
+urlpatterns += router.urls
+
+#urlpatterns = router.urls

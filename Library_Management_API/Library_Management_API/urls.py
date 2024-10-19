@@ -11,6 +11,6 @@ router.register(r'checkouts', views.CheckoutViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', RedirectView.as_view(url='/api/books/', permanent=False)), # Redirect to /api/books/
+    #path('', RedirectView.as_view(url='', permanent=False)), # Redirect to /api/books/
     path('api/', include(router.urls)),
 ]
