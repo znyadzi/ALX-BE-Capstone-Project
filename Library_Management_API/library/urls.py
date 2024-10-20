@@ -1,15 +1,12 @@
-from rest_framework import routers
-from . import views
+from django.urls import path, include
+from .views import BookView,DatabaseView,BookList
+from rest_framework.routers import DefaultRouter
 
-router = routers.DefaultRouter()
-router.register(r'books', views.BookViewSet)
-router.register(r'users', views.UserViewSet)
-router.register(r'checkouts', views.CheckoutViewSet)
+router =DefaultRouter()
+router.register(r'database',DatabaseView,basename='database')
+router.register(r'books',BookView,basename='books')
 
 urlpatterns = [
-    path('books/', BookViewSet.as_view()),
+    path('',include(router.urls)),
+    path('available_books/',BookList.as_view(),name='available_books'), #First path to checkout books
 ]
-
-urlpatterns += router.urls
-
-#urlpatterns = router.urls

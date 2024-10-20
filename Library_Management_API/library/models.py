@@ -1,44 +1,36 @@
 from django.db import models
-from django.core.validators import MinValueValidator
-from django.core.exceptions import ValidationError
-from django.utils import timezone
 
-def validate_isbn(value):
-    # Add more robust ISBN validation if needed (e.g., check length and format)
-    if len(value) != 13:
-        raise ValidationError("ISBN must be 13 digits long.")
+from django.contrib.auth import get_user_model
+# Create your models here.
+User = get_user_model()
 
+#I needed a model for book and database
+
+class Database(models.Model):
+    database_name = models.CharField(max_length=100,verbose_name='Database',null=False,unique=True)
+     #Here I intend to makes books_in_database behave like an attribute instead of a method,
+        #so you can access it as as a normal attribute like the rest of the attributes.
+    @property
+    def books_in_database(self):
+        number_of_books_in_database = self.books.all().count()
+        return str(number_of_books_in_database)
+    def __str__(self):
+        return self.database_name
 class Book(models.Model):
-    title = models.CharField(max_length=255)
-    author = models.CharField(max_length=255)
-    isbn = models.CharField(max_length=13, unique=True, validators=[validate_isbn])
-    published_date = models.DateField()
-    copies_available = models.IntegerField(default=1, validators=[MinValueValidator(0)])
-
+    title = models.CharField(max_length=150,verbose_name='book title',null=False,unique=False)
+    author = models.CharField(max_length=100, verbose_name='Author(s)',help_text='For more than 1 author, separate names with a comma',null=False)
+    isbn = models.CharField(verbose_name='ISBN',max_length=13,unique=True,null=False)
+    published_date = models.DateField(verbose_name='Publication_Date')
+    number_of_copies =models.PositiveIntegerField(verbose_name='Number of Copies Available')
+    edition = models.CharField(max_length=10,verbose_name='Book Edition')
+    database = models.ForeignKey(Database,on_delete=models.CASCADE,related_name='books')
+    
     def __str__(self):
-        return self.title
-
-class User(models.Model):
-    username = models.CharField(max_length=255, unique=True)
-    email = models.EmailField(unique=True)
-    date_of_membership = models.DateField(default=timezone.now)
-    is_active = models.BooleanField(default=True)
-
-    def __str__(self):
-        return self.username
-
-class Checkout(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    book = models.ForeignKey(Book, on_delete=models.CASCADE)
-    checkout_date = models.DateTimeField(auto_now_add=True)
-    return_date = models.DateTimeField(null=True, blank=True)
-
-    def save(self, *args, **kwargs):
-        if self.return_date:
-            book = self.book
-            book.copies_available += 1
-            book.save()
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.user.username} checked out {self.book.title}"
+        return f'Author(s):{self.author}, Title: {self.title}.'
+    #Since I created Group admin and student, I want the add to have all crud operations, while student can only read or borrow
+    class Meta:
+        permissions = [
+            ('create', 'can add a new book'),
+            ('edit', 'can update an existing book'),
+            ('delete', 'can delete an existing book')
+        ]

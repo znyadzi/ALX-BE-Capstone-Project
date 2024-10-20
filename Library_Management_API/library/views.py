@@ -1,81 +1,77 @@
-from django.shortcuts import render
-from rest_framework import viewsets, status
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAdminUser
-from .models import Book, User, Checkout
-from .serializers import BookSerializer, UserSerializer, CheckoutSerializer
-from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import render,get_object_or_404
+from .models import Book, Database
+from rest_framework import viewsets, permissions
+from .serializers import BookSerializer,DatabaseSerializer
+from rest_framework.decorators import permission_classes,authentication_classes
+from rest_framework.permissions import IsAuthenticated, DjangoModelPermissions,IsAdminUser
+from rest_framework.generics import ListAPIView
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
+from rest_framework.authentication import TokenAuthentication,SessionAuthentication,BasicAuthentication
+from .filters import BookFilter
+from django.urls import reverse
 
-class BookViewSet(viewsets.ModelViewSet):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
-    queryset = Book.objects.all()
+"""Create your views here.
+
+we create a custom readonly permission
+I INTEND TO ENSURE THAT ONLY THOSE WITH ADMIN PRIVILEGES CAN MAKE THESE CHANGES"""
+class BookPermission(permissions.BasePermission):
+    #This has permission is good with creating of a new object
+    def has_permission(self, request, view):
+        if view.action == 'create':
+            return request.user.has_perm('Library.create')
+        return True
+    #recommended when making changes to existing objects. \
+        
+    def has_object_permission(self, request, view, obj):
+        if view.action in ['update','partial_update']:
+            return request.user.has_perm('Library.edit')
+        elif view.action == 'destroy':
+            return request.user.has_perm('Library.delete')
+        return True
+
+"""we create the viewset for database creation.
+where only the superuser can create those databases or delete them,
+the admin can only perform crud operations on books"""
+class ObjectReadOnlyPermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return request.user.is_superuser #we want only superusers to have the rest of the permissions for crud operations
+    
+#Next, we create the databaseviewset
+@authentication_classes([TokenAuthentication,SessionAuthentication,BasicAuthentication])
+class DatabaseView(viewsets.ModelViewSet):
+    """
+    {
+        "database_name":"samplename"
+    }
+    This is a post method that expects this input. Only superusers have access
+    """
+    queryset = Database.objects.all()
+    serializer_class = DatabaseSerializer
+    permission_classes=[ObjectReadOnlyPermission]
+#Next, we create the Bookviewset
+@permission_classes([IsAuthenticated,BookPermission])
+@authentication_classes([TokenAuthentication,SessionAuthentication,BasicAuthentication])
+class BookView(viewsets.ModelViewSet):
+    """
+    post method. Only admins can add, edit, or delete books
+    It also allows get for non admins
+    You can filter by title,isbn,published_date and number_of_copies and number_of_copies__gt=int
+    """
+    queryset = Book.objects.all().order_by('-published_date')
     serializer_class = BookSerializer
+    filter_backends = [DjangoFilterBackend] #It is a good filter approach that allows the use of different filter approaches
+    filterset_class = BookFilter #I pass the bookfilter so that I can now search with greater than
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated]) #Added permission class here
-
-    def checkout(self, request, pk=None):
-        try:
-            book = self.get_object()  # Get the book instance using the primary key (pk)
-
-            if book.is_checked_out:
-                return Response({"detail": "Book is already checked out."}, status=status.HTTP_400_BAD_REQUEST)
-
-            user = request.user  # Get the currently authenticated user
-
-            # Create a new checkout entry
-            checkout = Checkout.objects.create(
-                user=user,
-                book=book,
-                checkout_date=datetime.now(),
-                due_date=datetime.now() + timedelta(days=14)  # 14-day due date
-            )
-
-            book.is_checked_out = True
-            book.save()
-
-            serializer = CheckoutSerializer(checkout)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        except Book.DoesNotExist:
-            return Response({"detail": "Book not found."}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({"detail": f"Checkout failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-class UserViewSet(viewsets.ModelViewSet):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAdminUser] # Admins only can manage users
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-class CheckoutViewSet(viewsets.ModelViewSet):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated] # Only authenticated users can view checkouts
-    queryset = Checkout.objects.all()
-    serializer_class = CheckoutSerializer
-
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated]) #Added permission class here
-    def return_book(self, request, pk=None):
-        # ... (return logic remains the same)
-        try:
-            checkout = self.get_object() # Get the checkout instance using the primary key (pk)
-
-            if checkout.return_date is not None:
-                return Response({"detail": "Book already returned."}, status=status.HTTP_400_BAD_REQUEST)
-
-            checkout.return_date = datetime.now()
-            checkout.save()
-
-            book = checkout.book
-            book.is_checked_out = False
-            book.save()
-
-            serializer = CheckoutSerializer(checkout)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-
-        except Checkout.DoesNotExist:
-            return Response({"detail": "Checkout not found."}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({"detail": f"Return failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+class BookList(ListAPIView):
+    """
+    This is a get method
+    It lists the number of books present and their details
+    """
+    
+    serializer_class = BookSerializer #I have to serialize the results
+    queryset = Book.objects.all().order_by('-published_date')
+    filter_backends = [DjangoFilterBackend] #It is a good filter approach that allows the use of different filter approaches
+    filterset_class = BookFilter #I pass the bookfilter so that I can now search with greater than
