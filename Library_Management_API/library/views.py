@@ -1,20 +1,20 @@
-from django.shortcuts import render,get_object_or_404
-from .models import Book, Database
-from rest_framework import viewsets, permissions
-from .serializers import BookSerializer,DatabaseSerializer
-from rest_framework.decorators import permission_classes,authentication_classes
-from rest_framework.permissions import IsAuthenticated, DjangoModelPermissions,IsAdminUser
-from rest_framework.generics import ListAPIView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
+from rest_framework import viewsets, permissions
+from django.shortcuts import render,get_object_or_404
+from rest_framework.permissions import IsAuthenticated, DjangoModelPermissions,IsAdminUser
+from rest_framework.generics import ListAPIView
+from .models import Book, Database
+from rest_framework.decorators import permission_classes,authentication_classes
+from .serializers import BookSerializer,DatabaseSerializer
+
 from rest_framework.authentication import TokenAuthentication,SessionAuthentication,BasicAuthentication
 from .filters import BookFilter
 from django.urls import reverse
 
-"""Create your views here.
-
-we create a custom readonly permission
-I INTEND TO ENSURE THAT ONLY THOSE WITH ADMIN PRIVILEGES CAN MAKE THESE CHANGES"""
+"""
+creating a read only permission to make sure that only admins can make the relevant changes
+"""
 class BookPermission(permissions.BasePermission):
     #This has permission is good with creating of a new object
     def has_permission(self, request, view):
@@ -30,9 +30,11 @@ class BookPermission(permissions.BasePermission):
             return request.user.has_perm('Library.delete')
         return True
 
-"""we create the viewset for database creation.
-where only the superuser can create those databases or delete them,
-the admin can only perform crud operations on books"""
+"""
+creating views for the database.
+Only the superuser can create CUD(CREATE, UPDATE or DELETE) the database and content
+admins can perform CRUD operations on the book data
+"""
 class ObjectReadOnlyPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
@@ -51,7 +53,8 @@ class DatabaseView(viewsets.ModelViewSet):
     queryset = Database.objects.all()
     serializer_class = DatabaseSerializer
     permission_classes=[ObjectReadOnlyPermission]
-#Next, we create the Bookviewset
+#Creating the view for books
+
 @permission_classes([IsAuthenticated,BookPermission])
 @authentication_classes([TokenAuthentication,SessionAuthentication,BasicAuthentication])
 class BookView(viewsets.ModelViewSet):
@@ -60,18 +63,21 @@ class BookView(viewsets.ModelViewSet):
     It also allows get for non admins
     You can filter by title,isbn,published_date and number_of_copies and number_of_copies__gt=int
     """
+
+    filter_backends = [DjangoFilterBackend] # Filtering the backend code differently
+    filterset_class = BookFilter # Filtering the books  
+    serializer_class = BookSerializer #Book Serializer
     queryset = Book.objects.all().order_by('-published_date')
-    serializer_class = BookSerializer
-    filter_backends = [DjangoFilterBackend] #It is a good filter approach that allows the use of different filter approaches
-    filterset_class = BookFilter #I pass the bookfilter so that I can now search with greater than
+    
+
 
 class BookList(ListAPIView):
     """
-    This is a get method
-    It lists the number of books present and their details
+    The get method is used here to
+    List the number of books present with the corresponding details
     """
-    
-    serializer_class = BookSerializer #I have to serialize the results
+
+    filter_backends = [DjangoFilterBackend] # Filtering the backend code differently
+    filterset_class = BookFilter # Filtering the books    
+    serializer_class = BookSerializer # Setting the serializer route
     queryset = Book.objects.all().order_by('-published_date')
-    filter_backends = [DjangoFilterBackend] #It is a good filter approach that allows the use of different filter approaches
-    filterset_class = BookFilter #I pass the bookfilter so that I can now search with greater than

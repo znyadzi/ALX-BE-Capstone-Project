@@ -32,38 +32,39 @@ MAIL_GUN_DOMAIN = os.getenv('MAILGUN_SENDER_DOMAIN')
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'DEFAULT_KEY')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = bool( os.environ.get('DJANGO_DEBUG', True) )
-ALLOWED_HOSTS = ['localhost','127.0.0.1','skywokerr.pythonanywhere.com']
-# 'localhost','127.0.0.1','skywokerr.pythonanywhere.com'
+# setting the debug parameter to allow or not allow for showing debug notes
+DEBUG = False
+# bool( os.environ.get('DJANGO_DEBUG', True) )
+# allowing python anywhere and localhost to access the API
+ALLOWED_HOSTS = ['localhost','127.0.0.1','znyadzi1.pythonanywhere.com']
 
 
-# Application definition
+
+# My installed Applications go here
 
 INSTALLED_APPS = [
+    'rest_framework.authtoken',
+    'django_filters',
+    'drf_yasg',
+    'notifications',
+    'accounts',
+    'rest_framework',
+    'Library',
+    'transactions',
+    'anymail',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'accounts',
-    'rest_framework',
-    'rest_framework.authtoken',
-    'django_filters',
-    'Library',
-    'transactions',
-    'drf_yasg',
-    'notifications',
-    'anymail',
+
 ]
 
+# The middlewares
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -94,20 +95,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'Library_Management_API.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "mysql.connector.django",
-#         "NAME": "Library_Management_API_db",
-#         "USER": DB_USER,
-#         "PASSWORD": DB_PASSWORD,
-#         "HOST": DB_HOST,
-#         "PORT": "3306",
-#     }
-# }
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -134,8 +121,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/5.1/topics/i18n/
+# Setting Your Standards
 
 LANGUAGE_CODE = 'en-us'
 
@@ -146,14 +132,12 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
+# Allowing Static files for the API project
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR,'static')
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.CustomUser'
@@ -163,12 +147,20 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ]
 }
-EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend" #as per anymail, an email backend is required for any email service provider
+
+#assing an email backend for anymail app
+
+EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
+
+# Setting the API key and sender domain parameters
 ANYMAIL = {
     "MAILGUN_API_KEY": MAIL_API,   #I passed the api key securely as well as the domain
     "MAILGUN_SENDER_DOMAIN": MAIL_GUN_DOMAIN,  
 }
-DEFAULT_FROM_EMAIL = DEF_FROM_EMAIL_IS #I also passed the email securely
+
+#Finally passing the email securely
+
+DEFAULT_FROM_EMAIL = DEF_FROM_EMAIL_IS 
 # EMAIL_USE_TLS = True
 # EMAIL_PORT = 587
 

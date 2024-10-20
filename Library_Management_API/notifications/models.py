@@ -7,7 +7,6 @@ from django.core.mail import send_mail, EmailMessage,get_connection
 import ssl
 User = get_user_model()
 
-# Create your models here.
 #This notification will work to send notifications to users who want to be \
     # notified when the book instance number of copies changes from 0 to 1
 class BookAvailableNotification(models.Model):
@@ -29,9 +28,9 @@ def check_availability_of_books(sender,instance, created,**kwargs):
         if instance.number_of_copies == 1: #when the book is returned, it shifts from 0 to 1 meaning its available
             notifications = BookAvailableNotification.objects.filter(book=instance, notified=False) #we go those specific notifications
             for notification in notifications: #we make use of django send mail and an external email api company called Mailgun
-                send_mail(subject=f'Notification that {notification.book.title} has been returned',
-                            message='Hello! You can now log in to checkout the book.', 
-                            from_email='guandarualex3@gmail.com',  
+                send_mail(subject=f'Your Book {notification.book.title} was returned Successfully',
+                            message=f'Hello {notification.user.email}, \n Kindly Login to checkout the book.', 
+                            from_email='znyadzi1@gmail.com',  
                             recipient_list=[notification.user.email], 
                             fail_silently=False,)
                 notification.notified = True #when the message is sent, the notification is turned as true
